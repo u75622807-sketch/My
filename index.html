@@ -1,113 +1,79 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server Power Test - HD</title>
+    <title>Server Load Tester - 1 Sec</title>
     <style>
-        :root {
-            --primary: #00ff88;
-            --bg: #0f172a;
-        }
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: var(--bg);
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            text-align: center;
-            width: 350px;
-        }
-        h2 { color: var(--primary); margin-bottom: 1.5rem; }
-        input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 8px;
-            border: none;
-            background: #1e293b;
-            color: white;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            background: var(--primary);
-            border: none;
-            border-radius: 8px;
-            color: #0f172a;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-            font-size: 1rem;
-        }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.4);
-        }
-        #status {
-            margin-top: 1rem;
-            font-size: 0.9rem;
-        }
+        body { background: #000; color: #00ff00; font-family: monospace; text-align: center; padding: 20px; }
+        .box { border: 2px solid #00ff00; padding: 20px; display: inline-block; border-radius: 10px; }
+        #log { height: 300px; overflow-y: scroll; border: 1px solid #333; margin-top: 20px; padding: 10px; text-align: left; background: #111; }
+        .error { color: #ff0000; font-weight: bold; }
+        .success { color: #00ff00; }
+        button { padding: 10px 20px; cursor: pointer; background: #00ff00; border: none; font-weight: bold; }
+        button.stop { background: #ff0000; color: white; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>🚀 Server Test</h2>
-    <form id="testForm">
-        <input type="text" name="user_name" placeholder="अपना नाम लिखें" required>
-        <input type="text" name="test_message" value="Speed Test - 1 Second Check" readonly>
-        <button type="submit" id="submitBtn">Check Power ⚡</button>
-    </form>
-    <div id="status"></div>
+<div class="box">
+    <h1>🚀 Server Stress Test</h1>
+    <p>हर 1 सेकंड में एक मैसेज जाएगा</p>
+    <button id="startBtn">टेस्ट शुरू करें (Start Test)</button>
+    <button id="stopBtn" class="stop" style="display:none;">रोकें (Stop)</button>
+    
+    <div id="stats">
+        <p>सफल मैसेज: <span id="count">0</span></p>
+        <p>सर्वर स्टेटस: <span id="serverStatus">तैयार (Ready)</span></p>
+    </div>
 </div>
 
+<div id="log"></div>
+
 <script>
-    const form = document.getElementById('testForm');
-    const status = document.getElementById('status');
+    let testInterval;
+    let count = 0;
+    const RENDER_URL = 'https://YOUR-APP.onrender.com/'; // अपना असली लिंक यहाँ डालें
 
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const startTime = Date.now(); // समय नोट करें
-        status.innerHTML = "भेजा जा रहा है...";
-        status.style.color = "#ffcc00";
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const log = document.getElementById('log');
+    const countSpan = document.getElementById('count');
+    const serverStatus = document.getElementById('serverStatus');
 
-        const formData = new FormData(form);
-        
+    async function sendRequest() {
+        count++;
+        const startTime = Date.now();
+        const currentCount = count;
+
         try {
-            // यहाँ अपना RENDER वाला URL डालें
-            const response = await fetch('https://YOUR-RENDER-APP-URL.onrender.com/', {
+            const response = await fetch(RENDER_URL, {
                 method: 'POST',
-                body: formData
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    test_id: currentCount,
+                    message: "Server Load Check ⚡",
+                    timestamp: new Date().toLocaleTimeString()
+                })
             });
 
-            const endTime = Date.now(); // रिस्पॉन्स आने का समय
-            const duration = (endTime - startTime) / 1000; // सेकंड में
+            const duration = (Date.now() - startTime) / 1000;
 
             if (response.ok) {
-                status.innerHTML = `✅ सफलता! सर्वर ने ${duration} सेकंड में रिस्पॉन्स दिया।`;
-                status.style.color = "#00ff88";
+                log.innerHTML = `<p class="success">[${currentCount}] ✅ सफलता: ${duration}s में पहुँचा</p>` + log.innerHTML;
+                countSpan.innerText = currentCount;
+                serverStatus.innerText = "ऑनलाइन (Online)";
+                serverStatus.className = "success";
             } else {
-                status.innerHTML = "❌ सर्वर एरर! URL चेक करें।";
-                status.style.color = "#ff4444";
+                throw new Error("Server Overloaded");
             }
-        } catch (error) {
-            status.innerHTML = "❌ कनेक्शन फेल! क्या आपका सर्वर चालू है?";
-            status.style.color = "#ff4444";
+        } catch (err) {
+            log.innerHTML = `<p class="error">[${currentCount}] ❌ सर्वर डाउन! (Server Down)</p>` + log.innerHTML;
+            serverStatus.innerText = "डाउन (DOWN)";
+            serverStatus.className = "error";
+            stopTest(); // एरर आते ही टेस्ट रोक दें
         }
-    });
-</script>
+    }
 
-</body>
-</html>
+    function startTest() {
+        startBtn.style.display = 'none';
+        stopBtn.style.
